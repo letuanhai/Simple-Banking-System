@@ -1,5 +1,4 @@
 # Write your code here
-import random
 
 WELCOME_PROMPT = """
 1. Create an account
@@ -11,8 +10,13 @@ LOGGED_IN_PROMPT = """
 2. Log out
 0. Exit
 """
-accounts = {}
 
+class Account:
+    accounts = {}
+    # Dictionary of card_number:Account object pairs
+    def __init__(self):
+        card_number = "400000" + format(random.randint(0, 9999999), "09")
+        card_digits = []
 
 def create_account(acc_list):
     card_number = "400000" + format(random.randint(0, 9999999), "09") + "0"
