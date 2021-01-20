@@ -23,31 +23,64 @@ LOGGED_IN_PROMPT = """
 0. Exit
 """
 
+
 class Account:
-    def __init__(self, number, pin, balance):
+    def __init__(self, id, number, pin, balance):
+        self.id = id
         self.card_number = number
         self.pin = pin
         self.balance = balance
 
     def check_balance(self):
-        print('Balance: ', self.balance)
+        print("Balance:", self.balance)
 
-    def add_income(self, income):
-        input('Enter income:\n')
-        cur.execute('UPDATE card SET balance = balance + ? WHERE number = ?', (self.card_number, income))
+    def add_income(self):
+        income = int(input("Enter income:\n"))
+        cur.execute(
+            "UPDATE card SET balance = balance + ? WHERE number = ?;",
+            (income, self.card_number),
+        )
         conn.commit()
         self.balance += income
-        print('Income was added!')
+        print("Income was added!")
 
-    def do_transfer(self, recipient, amount):
-        if not is_valid_card(recipient):
-            print('Probably you made a mistake in the card number. Please try again!')
+    def do_transfer(self):
+        recipient = input("Transfer\nEnter card number:\n")
+        if recipient == self.card_number:
+            print("You can't transfer money to the same account!")
             return False
-        elif self.balance < amount:
-            print('')
+        if not is_valid_card(recipient):
+            print("Probably you made a mistake in the card number. Please try again!")
+            return False
+        if not is_account_existed(recipient):
+            print("Such a card does not exist.")
+            return False
+        amount = int(input("Enter how much money you want to transfer:\n"))
+        if self.balance < amount:
+            print("Not enough money!")
+            return False
+        cur.execute(
+            "UPDATE card SET balance = balance + ? WHERE number = ?;",
+            (amount, recipient),
+        )
+        cur.execute(
+            "UPDATE card SET balance = balance - ? WHERE number = ?;",
+            (amount, self.card_number),
+        )
+        conn.commit()
+        self.balance -= amount
+        print("Success!")
 
     def close_account(self):
-        pass
+        cur.execute("DELETE FROM card WHERE number = ?;", (self.card_number,))
+        conn.commit()
+        print("The account has been closed!")
+
+
+def is_account_existed(card_number):
+    cur.execute("SELECT * FROM card WHERE number = ?;", (card_number,))
+    account = cur.fetchone()
+    return bool(account)
 
 
 def is_valid_card(card_number):
@@ -96,7 +129,7 @@ def log_in():
     if account:
         if account[2] == pin_code:
             print("You have successfully logged in!")
-            return True, account
+            return True, Account(*account)
     print("Wrong card number or PIN!")
     return False, None
 
@@ -113,7 +146,14 @@ while choice != 0:
             logged_in, current_account = log_in()
     else:
         if choice == 1:
-            print("Balance: ", current_account[3])
+            current_account.check_balance()
+        elif choice == 2:
+            current_account.add_income()
+        elif choice == 3:
+            current_account.do_transfer()
+        elif choice == 4:
+            current_account.close_account()
+            logged_in = False
         else:
             logged_in = False
 
